@@ -13,6 +13,10 @@ app.get('/js/sketch.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'client/js/sketch.js'))
 })
 
+app.get('/font/midazzle', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/font/midazzle.ttf'))
+})
+
 // app.get('/js/gameboard.js', (req, res) => {
 //     res.sendFile(path.join(__dirname, 'client/js/sketch.js'))
 // })
