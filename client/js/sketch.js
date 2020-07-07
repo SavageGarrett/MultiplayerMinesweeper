@@ -110,28 +110,63 @@ class GameBoard{
     // Clear Whitespace in Array
     // Assumes x, y is a valid clear space
     reveal_tiles(x, y) {
-        // Array of white spaces found - Initially stores the first x, y value which we know is a white space
-        var locations_found = [{ x: x, y: y }];
-        var all_locations = [{ x: x, y: y }]; // Array to store found locations so they don't get checked twice
+        if (number_board.get_square(x, y) == 0) { // If Space is Clear
+            // Array of white spaces found - Initially stores the first x, y value which we know is a white space
+            var locations_found = [{ x: x, y: y }];
+            var all_locations = [{ x: x, y: y }]; // Array to store found locations so they don't get checked twice
 
-        while (locations_found.length > 0) { // Loop until there are no more white space locations
-            let current_location = locations_found.shift();
-            for (let i = -1; i <= 1; i++) { // Loop through surrounding indices on board
-                for (let j = -1; j <= 1; j++) {
-                    // Make Sure Index Exists
-                    if (current_location.x + i !== -1 && current_location.x + i < num_tiles_x && current_location.y + j !== -1 && current_location.y + j < num_tiles_y) {
-                        // Clear and Add to Array if Exists
-                        if (!(i == 0 && j == 0) && number_board.get_square(current_location.x + i, current_location.y + j) == 0 && !this.check_dupe(all_locations, { x:  current_location.x + i, y: current_location.y + j})) { // Add to found locations
-                            locations_found.push({ x: current_location.x + i, y: current_location.y + j }); // Push to continue finding locations
-                            all_locations.push({ x: current_location.x + i, y: current_location.y + j });
-                            this.set_square(current_location.x + i, current_location.y + j, 4);
-                        } else if (current_location.x + i == x && current_location.y + j == y) { // Just Clear if Initial Tile
-                            this.set_square(x, y, 4);
-                        } else if (number_board.get_square(current_location.x + i, current_location.y + j) >= 1 && number_board.get_square(current_location.x + i, current_location.y + j) <= 8) { // Check if number tile has been revealed around whitespace tile
-                            this.set_square(current_location.x + i, current_location.y + j, 6);
+            while (locations_found.length > 0) { // Loop until there are no more white space locations
+                let current_location = locations_found.shift();
+                for (let i = -1; i <= 1; i++) { // Loop through surrounding indices on board
+                    for (let j = -1; j <= 1; j++) {
+                        // Make Sure Index Exists
+                        if (current_location.x + i !== -1 && current_location.x + i < num_tiles_x && current_location.y + j !== -1 && current_location.y + j < num_tiles_y) {
+                            // Clear and Add to Array if Exists
+                            if (!(i == 0 && j == 0) && number_board.get_square(current_location.x + i, current_location.y + j) == 0 && !this.check_dupe(all_locations, { x:  current_location.x + i, y: current_location.y + j})) { // Add to found locations
+                                locations_found.push({ x: current_location.x + i, y: current_location.y + j }); // Push to continue finding locations
+                                all_locations.push({ x: current_location.x + i, y: current_location.y + j });
+                                this.set_square(current_location.x + i, current_location.y + j, 4);
+                            } else if (current_location.x + i == x && current_location.y + j == y) { // Just Clear if Initial Tile
+                                this.set_square(x, y, 4);
+                            } else if (number_board.get_square(current_location.x + i, current_location.y + j) >= 1 && number_board.get_square(current_location.x + i, current_location.y + j) <= 8) { // Check if number tile has been revealed around whitespace tile
+                                this.set_square(current_location.x + i, current_location.y + j, 6);
+                            }
                         }
+                        
                     }
-                    
+                }
+            }
+        } else if (number_board.get_square(x, y) <= 8 && number_board.get_square(x, y) >= 1 ) { // If Space is Number
+            this.set_square(x, y, 6);
+        }
+    }
+
+    // Set a flag square
+    set_flag(x, y) {
+        let current_square = working_board.get_square(x, y);
+
+        // If current square is clear or bomb
+        if (current_square == 1 || current_square == 2) {
+            // Set as flag
+            this.set_square(x, y, 3);
+        } else if (current_square == 3) { // If current square is flag
+            // Set as uncleared
+            this.set_square(x, y, 1);
+        }
+    }
+
+    // Clear Numbers
+    clear_numbers(x, y) {
+        // Loop through surrounding tiles
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                if (board.get_square(x + i, y + j) == 2 && working_board.get_square(x + i, y + j) != 3) { // If Unflagged Bomb
+                    // End Game
+                    working_board.set_square(x + i, y + j, 5)
+                    game_over = true;
+                } else if (working_board.get_square(x + i, y + j) == 1) { // If Uncleared
+                    // Clear
+                    working_board.reveal_tiles(x + i, y + j);
                 }
             }
         }
@@ -165,22 +200,12 @@ class NumberBoard extends GameBoard {
             }
         }
     }
-
-    get_number_board() {
-        return
-    }
 }
 
 // Declare Original Board (Just Bombs), Working Board (Board with User Interaction), and Number Board (Board That Stores Numbers on Page)
 var board = new GameBoard(size, void 0); // Board array uses indices (1 = clear, 2 = bomb)
 var working_board = new GameBoard(size, board); // Board array uses indices (1 = uncleared, 2 = bomb, 3 = flag, 4 = clear, 5 = game over, 6 = Revealed number)
 var number_board = new NumberBoard(board); // Board array uses indices (0 - 8 = Amount of Bombs Surrounding, -1 = Bomb)
-
-// Function to Draw Tile Colors and Text
-function draw_tile() {
-
-}
-
 
 // Setup
 function setup() {
@@ -192,21 +217,26 @@ function setup() {
     textAlign(CENTER, CENTER);
 }
 
-//x is wide y is tall
+// Is Game Over
+let game_over = false;
+
+// x is wide y is tall
 function draw() {
     
     fill(128);
+
     for (let i = 0; i < num_tiles_x; i++) {
         for (let j = 0; j < num_tiles_y; j++) {
             // Get Each tile of the Board to draw
             if (working_board.get_square(i, j) == 5) { // Bomb Clicked TODO: End Game
-                fill('orange');
+                fill('red');
                 rect(i * tile_size, j * tile_size, tile_size, tile_size);
+                game_over = true
             } else if (working_board.get_square(i, j) == 4) { // Cleared
                 fill('white');
                 rect(i * tile_size, j * tile_size, tile_size, tile_size);
             } else if (working_board.get_square(i, j) == 3) { // Flag
-                fill('red');
+                fill('orange');
                 rect(i * tile_size, j * tile_size, tile_size, tile_size);
             } else if (working_board.get_square(i, j) == 6) { // Revealed Number
                 fill('white');
@@ -220,25 +250,66 @@ function draw() {
             
         }
     }
+
+    if (game_over) {
+        fill(255, 128);
+        rect(0, 0, tile_size * num_tiles_x, tile_size * num_tiles_y);
+        fill(0);
+        text("Game Over", tile_size * num_tiles_x / 2, tile_size * num_tiles_y / 2);
+    }
 }
 
-function mouseClicked(event) {
+// Boolean to Determine if Click was the first click of the game
+let first_click = true;
+
+// Event called on release of mouse button
+function mouseReleased() {
     // Get Array Indices of square selected
     let xSquare = Math.floor(mouseX / tile_size);
     let ySquare = Math.floor(mouseY / tile_size);
 
-    console.log(mouseButton)
-    console.log(event.button)
+    // If game start
+    if (first_click) {
+        
+        // Loop until clear area is found at click
+        while (number_board.get_square(xSquare, ySquare) != 0) {
+            // Generate new boards
+            board = new GameBoard(size, void 0);
+            working_board = new GameBoard(size, board);
+            number_board = new NumberBoard(board);
+        }
 
-    if (mouseButton === CENTER) { // Handle Flag on Right Click TODO: add remove flag if already exists
-        working_board.set_square(xSquare, ySquare, 3)
-    } else { // Handle any other tile
-        if (number_board.get_square(xSquare, ySquare) >= 1 && number_board.get_square(xSquare, ySquare) <= 8) { // Handle Number Square
+        working_board.reveal_tiles(xSquare, ySquare);
+
+        first_click = false;
+        return false;
+    }
+
+    if (mouseButton === RIGHT) {
+        working_board.set_flag(xSquare, ySquare, 3)
+    } else if (mouseButton === LEFT) {
+        if (number_board.get_square(xSquare, ySquare) >= 1 && number_board.get_square(xSquare, ySquare) <= 8 && working_board.get_square(xSquare, ySquare) != 6) { // Handle Number Square not already cleared
             working_board.reveal_single_tile(xSquare, ySquare);
         } else if (number_board.get_square(xSquare, ySquare) == 0) { // Handle Clear Square
             working_board.reveal_tiles(xSquare, ySquare);
         } else if (working_board.get_square(xSquare, ySquare) == 2) { // Handle Bomb Tile
-            working_board.set_square(xSquare, ySquare, 3);
-        } // TODO: Add Functionality for Clicking a number tile already cleared
+            working_board.set_square(xSquare, ySquare, 5);
+        } else if (working_board.get_square(xSquare, ySquare) == 6) {
+            working_board.clear_numbers(xSquare, ySquare);
+        }
     }
+
+    // Restart game if game over screen clicked
+    if (game_over) {
+        // Reset Game Variables
+        game_over = false;
+        first_click = true;
+
+        // Generate new boards
+        board = new GameBoard(size, void 0);
+        working_board = new GameBoard(size, board);
+        number_board = new NumberBoard(board);
+    }
+
+    return false;
 }
