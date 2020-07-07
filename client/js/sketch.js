@@ -156,7 +156,7 @@ class GameBoard{
     }
 
     // Clear Numbers
-    clear_numbers(x, y) {
+    clear_surrounding(x, y) {
         // Loop through surrounding tiles
         for (let i = -1; i <= 1; i++) {
             for (let j = -1; j <= 1; j++) {
@@ -167,6 +167,18 @@ class GameBoard{
                 } else if (working_board.get_square(x + i, y + j) == 1) { // If Uncleared
                     // Clear
                     working_board.reveal_tiles(x + i, y + j);
+                }
+            }
+        }
+    }
+
+    // Flag All Surrounding
+    flag_surrounding(x, y) {
+        // Loop through surrounding tiles
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                if (this.get_square(x + i, y + j) == 1 || this.get_square(x + i, y + j) == 2) { // If Unflagged Bomb
+                    this.set_square(x + i, y + j, 3);
                 }
             }
         }
@@ -207,6 +219,15 @@ var board = new GameBoard(size, void 0); // Board array uses indices (1 = clear,
 var working_board = new GameBoard(size, board); // Board array uses indices (1 = uncleared, 2 = bomb, 3 = flag, 4 = clear, 5 = game over, 6 = Revealed number)
 var number_board = new NumberBoard(board); // Board array uses indices (0 - 8 = Amount of Bombs Surrounding, -1 = Bomb)
 
+// Image Holder Variables
+let flag_img, bomb_img;
+
+// Preload Images
+function preload() {
+    flag_img = loadImage('img/flag.png');
+    bomb_img = loadImage('img/bomb.png');
+}
+
 // Setup
 function setup() {
     createCanvas(tile_size * num_tiles_x, tile_size * num_tiles_y);
@@ -222,22 +243,19 @@ let game_over = false;
 
 // x is wide y is tall
 function draw() {
-    
     fill(128);
 
     for (let i = 0; i < num_tiles_x; i++) {
         for (let j = 0; j < num_tiles_y; j++) {
             // Get Each tile of the Board to draw
-            if (working_board.get_square(i, j) == 5) { // Bomb Clicked TODO: End Game
-                fill('red');
-                rect(i * tile_size, j * tile_size, tile_size, tile_size);
-                game_over = true
+            if (working_board.get_square(i, j) == 5) {
+                image(bomb_img, i * tile_size, j * tile_size, tile_size, tile_size);
+                game_over = true;
             } else if (working_board.get_square(i, j) == 4) { // Cleared
                 fill('white');
                 rect(i * tile_size, j * tile_size, tile_size, tile_size);
             } else if (working_board.get_square(i, j) == 3) { // Flag
-                fill('orange');
-                rect(i * tile_size, j * tile_size, tile_size, tile_size);
+                image(flag_img, i * tile_size, j * tile_size, 0, 0);
             } else if (working_board.get_square(i, j) == 6) { // Revealed Number
                 fill('white');
                 rect(i * tile_size, j * tile_size, tile_size, tile_size);
@@ -268,6 +286,8 @@ function mouseReleased() {
     let xSquare = Math.floor(mouseX / tile_size);
     let ySquare = Math.floor(mouseY / tile_size);
 
+    let current_square = working_board.get_square(xSquare, ySquare);
+
     // If game start
     if (first_click) {
         
@@ -285,20 +305,6 @@ function mouseReleased() {
         return false;
     }
 
-    if (mouseButton === RIGHT) {
-        working_board.set_flag(xSquare, ySquare, 3)
-    } else if (mouseButton === LEFT) {
-        if (number_board.get_square(xSquare, ySquare) >= 1 && number_board.get_square(xSquare, ySquare) <= 8 && working_board.get_square(xSquare, ySquare) != 6) { // Handle Number Square not already cleared
-            working_board.reveal_single_tile(xSquare, ySquare);
-        } else if (number_board.get_square(xSquare, ySquare) == 0) { // Handle Clear Square
-            working_board.reveal_tiles(xSquare, ySquare);
-        } else if (working_board.get_square(xSquare, ySquare) == 2) { // Handle Bomb Tile
-            working_board.set_square(xSquare, ySquare, 5);
-        } else if (working_board.get_square(xSquare, ySquare) == 6) {
-            working_board.clear_numbers(xSquare, ySquare);
-        }
-    }
-
     // Restart game if game over screen clicked
     if (game_over) {
         // Reset Game Variables
@@ -309,6 +315,25 @@ function mouseReleased() {
         board = new GameBoard(size, void 0);
         working_board = new GameBoard(size, board);
         number_board = new NumberBoard(board);
+    }
+
+    // Right Click: Flag
+    if (mouseButton === RIGHT) {
+        if (current_square == 6) {
+            working_board.flag_surrounding(xSquare, ySquare);
+        } else {
+            working_board.set_flag(xSquare, ySquare, 3);
+        }
+    } else if (mouseButton === LEFT) { // Left Click: Handle Clearing Tiles
+        if (number_board.get_square(xSquare, ySquare) >= 1 && number_board.get_square(xSquare, ySquare) <= 8 && current_square != 6) { // Handle Number Square not already cleared
+            working_board.reveal_single_tile(xSquare, ySquare);
+        } else if (number_board.get_square(xSquare, ySquare) == 0) { // Handle Clear Square
+            working_board.reveal_tiles(xSquare, ySquare);
+        } else if (current_square == 2) { // Handle Bomb Tile
+            working_board.set_square(xSquare, ySquare, 5);
+        } else if (current_square == 6) {
+            working_board.clear_surrounding(xSquare, ySquare);
+        }
     }
 
     return false;
