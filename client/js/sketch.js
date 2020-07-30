@@ -2,8 +2,8 @@
 const size = 20;
 const fontsize = 20;
 const tile_size = 30;
-const num_tiles_x = 20;
-const num_tiles_y = 20;
+const num_tiles_x = 120;
+const num_tiles_y = 120;
 
 /**
  * GameBoard Object: Handles Game Board Colors
@@ -17,19 +17,19 @@ class GameBoard{
      * @param {Integer} size 
      * @param {GameBoard} copy_board 
      */
-    constructor(size, copy_board) {
+    constructor(size_x, size_y, copy_board) {
         if (copy_board !== void 0) {
             this.board = copy_board.get_board();
         } else {
-            this.generate_board(size);
+            this.generate_board(size_x, size_y);
         }
     }
 
-    generate_board(size) {
+    generate_board(size_x, size_y) {
         this.board = [];
             this.line = [];
-            for (let i = 0; i < size; i++) {
-                for (let j = 0; j < size; j++) {
+            for (let i = 0; i < size_x; i++) {
+                for (let j = 0; j < size_y; j++) {
                     let random = Math.floor((Math.random() * 10) + 1);
                     
                     // 1 in 10 chance of getting a mine
@@ -50,6 +50,7 @@ class GameBoard{
 
     // Get square at x,y index of the array
     get_square(x, y) {
+        //console.log(x, y);
         return this.board[x][y];
     }
 
@@ -196,7 +197,7 @@ class NumberBoard extends GameBoard {
      */
     constructor(board) {
         // Create new GameBoard from an existing GameBoard (tile_size gets ignored when board property is set)
-        super(num_tiles_x);
+        super(num_tiles_x, num_tiles_y);
 
         // Create New Numbered Board from Mine Board
         for (let i = 0; i < num_tiles_x; i++) {
@@ -215,8 +216,8 @@ class NumberBoard extends GameBoard {
 }
 
 // Declare Original Board (Just Bombs), Working Board (Board with User Interaction), and Number Board (Board That Stores Numbers on Page)
-var board = new GameBoard(size, void 0); // Board array uses indices (1 = clear, 2 = bomb)
-var working_board = new GameBoard(size, board); // Board array uses indices (1 = uncleared, 2 = bomb, 3 = flag, 4 = clear, 5 = game over, 6 = Revealed number)
+var board = new GameBoard(num_tiles_x, num_tiles_y, void 0); // Board array uses indices (1 = clear, 2 = bomb)
+var working_board = new GameBoard(num_tiles_x, num_tiles_y, board); // Board array uses indices (1 = uncleared, 2 = bomb, 3 = flag, 4 = clear, 5 = game over, 6 = Revealed number)
 var number_board = new NumberBoard(board); // Board array uses indices (0 - 8 = Amount of Bombs Surrounding, -1 = Bomb)
 
 // Image Holder Variables
@@ -288,14 +289,18 @@ function mouseReleased() {
 
     let current_square = working_board.get_square(xSquare, ySquare);
 
+    if (number_board.get_square(xSquare, ySquare) == void 0) {
+        return false;
+    }
+
     // If game start
     if (first_click) {
         
         // Loop until clear area is found at click
         while (number_board.get_square(xSquare, ySquare) != 0) {
             // Generate new boards
-            board = new GameBoard(size, void 0);
-            working_board = new GameBoard(size, board);
+            board = new GameBoard(num_tiles_x, num_tiles_y, void 0);
+            working_board = new GameBoard(num_tiles_x, num_tiles_y, board);
             number_board = new NumberBoard(board);
         }
 
@@ -312,8 +317,8 @@ function mouseReleased() {
         first_click = true;
 
         // Generate new boards
-        board = new GameBoard(size, void 0);
-        working_board = new GameBoard(size, board);
+        board = new GameBoard(num_tiles_x, num_tiles_y, void 0);
+        working_board = new GameBoard(num_tiles_x, num_tiles_y, board);
         number_board = new NumberBoard(board);
     }
 
@@ -325,6 +330,7 @@ function mouseReleased() {
             working_board.set_flag(xSquare, ySquare, 3);
         }
     } else if (mouseButton === LEFT) { // Left Click: Handle Clearing Tiles
+        console.log(xSquare, ySquare)
         if (number_board.get_square(xSquare, ySquare) >= 1 && number_board.get_square(xSquare, ySquare) <= 8 && current_square != 6) { // Handle Number Square not already cleared
             working_board.reveal_single_tile(xSquare, ySquare);
         } else if (number_board.get_square(xSquare, ySquare) == 0) { // Handle Clear Square
