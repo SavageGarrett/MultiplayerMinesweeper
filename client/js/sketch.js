@@ -2,8 +2,15 @@
 const size = 20;
 const fontsize = 20;
 const tile_size = 30;
-const num_tiles_x = 120;
-const num_tiles_y = 120;
+
+let windowWidth = window.innerHeight;
+let windowHeight = window.innerHeight;
+
+let num_tiles_x = Math.ceil(windowWidth / tile_size);
+let num_tiles_y = Math.ceil(windowHeight / tile_size);
+
+let playAreaWidth = Math.ceil(windowWidth / num_tiles_x);
+let playAreaHeight = Math.ceil(windowHeight / num_tiles_y);
 
 /**
  * GameBoard Object: Handles Game Board Colors
@@ -27,21 +34,21 @@ class GameBoard{
 
     generate_board(size_x, size_y) {
         this.board = [];
-            this.line = [];
-            for (let i = 0; i < size_x; i++) {
-                for (let j = 0; j < size_y; j++) {
-                    let random = Math.floor((Math.random() * 10) + 1);
-                    
-                    // 1 in 10 chance of getting a mine
-                    if (random == 3) {
-                        this.line[j] = 2;
-                    }  else {
-                        this.line[j] = 1;
-                    }
+        this.line = [];
+        for (let i = 0; i < size_x; i++) {
+            for (let j = 0; j < size_y; j++) {
+                let random = Math.floor((Math.random() * 10) + 1);
+                
+                // 1 in 10 chance of getting a mine
+                if (random == 3) {
+                    this.line[j] = 2;
+                }  else {
+                    this.line[j] = 1;
                 }
-                this.board[i] = this.line;
-                this.line = [];
             }
+            this.board[i] = this.line;
+            this.line = [];
+        }
     }
 
     get_board() {
@@ -230,13 +237,25 @@ function preload() {
 }
 
 // Setup
+console.log(window.innerWidth, window.innerHeight)
 function setup() {
-    createCanvas(tile_size * num_tiles_x, tile_size * num_tiles_y);
+    createCanvas(tile_size * num_tiles_x * 3, tile_size * num_tiles_y * 3);
     background(225);
 
     // Set Text Style
     textSize(fontsize);
     textAlign(CENTER, CENTER);
+
+    // Draw Surrounding White Tiles to be Rendered from Larger Board
+    stroke(255);
+    fill (255);
+    rect(0, 0, playAreaWidth * 3 * num_tiles_x, playAreaHeight * num_tiles_y);
+    rect(0, playAreaHeight * num_tiles_y, playAreaWidth * num_tiles_x, playAreaHeight * num_tiles_y * 2)
+    rect(playAreaWidth * 2 * num_tiles_x, playAreaHeight * num_tiles_y, playAreaWidth * num_tiles_x, playAreaHeight * num_tiles_y * 2)
+    rect(playAreaWidth * num_tiles_x, playAreaHeight * num_tiles_y * 2, playAreaWidth * num_tiles_x, playAreaHeight * num_tiles_y)
+
+    // Scroll to Correct Window Position after first Draw
+    window.scrollTo(playAreaWidth * num_tiles_x, playAreaHeight * num_tiles_y);
 }
 
 // Is Game Over
@@ -244,27 +263,28 @@ let game_over = false;
 
 // x is wide y is tall
 function draw() {
+    stroke(0);
     fill(128);
 
     for (let i = 0; i < num_tiles_x; i++) {
         for (let j = 0; j < num_tiles_y; j++) {
             // Get Each tile of the Board to draw
             if (working_board.get_square(i, j) == 5) {
-                image(bomb_img, i * tile_size, j * tile_size, tile_size, tile_size);
+                image(bomb_img, i * tile_size + playAreaWidth * num_tiles_x, j * tile_size + playAreaHeight * num_tiles_y, tile_size, tile_size);
                 game_over = true;
             } else if (working_board.get_square(i, j) == 4) { // Cleared
                 fill('white');
-                rect(i * tile_size, j * tile_size, tile_size, tile_size);
+                rect(i * tile_size + playAreaWidth * num_tiles_x, j * tile_size + playAreaHeight * num_tiles_y, tile_size, tile_size);
             } else if (working_board.get_square(i, j) == 3) { // Flag
-                image(flag_img, i * tile_size, j * tile_size, 0, 0);
+                image(flag_img, i * tile_size + playAreaWidth * num_tiles_x, j * tile_size + playAreaHeight * num_tiles_y, 0, 0);
             } else if (working_board.get_square(i, j) == 6) { // Revealed Number
                 fill('white');
-                rect(i * tile_size, j * tile_size, tile_size, tile_size);
+                rect(i * tile_size + playAreaWidth * num_tiles_x, j * tile_size + playAreaHeight * num_tiles_y, tile_size, tile_size);
                 fill (0);
-                text(number_board.get_square(i, j).toString(), (tile_size / 2) + i * tile_size, (tile_size / 2) + j * tile_size);
+                text(number_board.get_square(i, j).toString(), (tile_size / 2) + i * tile_size + playAreaWidth * num_tiles_x, (tile_size / 2) + j * tile_size + playAreaHeight * num_tiles_y);
             } else {
                 fill(128);
-                rect(i * tile_size, j * tile_size, tile_size, tile_size);
+                rect(i * tile_size + playAreaWidth * num_tiles_x, j * tile_size + playAreaHeight * num_tiles_y, tile_size, tile_size);
             }
             
         }
@@ -284,8 +304,9 @@ let first_click = true;
 // Event called on release of mouse button
 function mouseReleased() {
     // Get Array Indices of square selected
-    let xSquare = Math.floor(mouseX / tile_size);
-    let ySquare = Math.floor(mouseY / tile_size);
+    console.log(mouseX, mouseY)
+    let xSquare = Math.floor((mouseX - playAreaWidth * num_tiles_x) / tile_size);
+    let ySquare = Math.floor((mouseY - playAreaHeight * num_tiles_y) / tile_size);
 
     let current_square = working_board.get_square(xSquare, ySquare);
 
